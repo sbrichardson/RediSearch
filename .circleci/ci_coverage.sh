@@ -9,7 +9,7 @@ fi
 
 ./.circleci/ci_get_deps.sh
 apt-get update
-apt-get -y install lcov curl
+apt-get -y install lcov curl gcovr
 
 mkdir build-coverage
 cd build-coverage

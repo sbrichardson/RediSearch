@@ -18,7 +18,7 @@ class RediSearchSetup(paella.Setup):
         self.pip_install("wheel")
         self.pip_install("setuptools --upgrade")
 
-        self.install("git cmake wget awscli lcov")
+        self.install("git cmake wget awscli lcov gcovr")
 
     def debian_compat(self):
         self.install("libatomic1")
