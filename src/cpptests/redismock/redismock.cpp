@@ -636,6 +636,16 @@ Module::ModuleMap Module::modules;
 std::vector<KVDB *> KVDB::dbs;
 static int RMCK_GetApi(const char *s, void *pp);
 
+static std::vector<RedisModuleEventCallback> redisModuleEventCallbacks;
+
+static int RMCK_SubscribeToServerEvent(RedisModuleCtx *ctx, RedisModuleEvent event,
+                                       RedisModuleEventCallback callback) {
+  if (event.id == REDISMODULE_EVENT_SHUTDOWN) {
+    redisModuleEventCallbacks.push_back(callback);
+  }
+  return REDISMODULE_OK;
+}
+
 /** Misc */
 RedisModuleCtx::~RedisModuleCtx() {
   if (automemory) {
@@ -739,6 +749,8 @@ static void registerApis() {
   REGISTER_API(AutoMemory);
   REGISTER_API(ExportSharedAPI);
   REGISTER_API(GetSharedAPI);
+
+  REGISTER_API(SubscribeToServerEvent);
 }
 
 static int RMCK_GetApi(const char *s, void *pp) {

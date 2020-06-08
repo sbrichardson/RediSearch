@@ -25,7 +25,7 @@ class MyEnvironment : public ::testing::Environment {
 
   virtual void TearDown() {
     RMCK_Shutdown();
-    RediSearch_CleanupModule();
+    RediSearch_CleanupModule(NULL, RedisModuleEvent_Shutdown, 0, NULL);
   }
 };
 

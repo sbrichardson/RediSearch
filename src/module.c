@@ -920,7 +920,11 @@ int RediSearch_InitModuleInternal(RedisModuleCtx *ctx, RedisModuleString **argv,
   return REDISMODULE_OK;
 }
 
-void __attribute__((destructor)) RediSearch_CleanupModule(void) {
+void RediSearch_CleanupModule(RedisModuleCtx *ctx, RedisModuleEvent eid, uint64_t subevent, void *data) {
+  if (eid.id != REDISMODULE_EVENT_SHUTDOWN) {
+    return;
+  }
+
   if (getenv("RS_GLOBAL_DTORS")) {  // used in sanitizer
     static int invoked = 0;
     if (invoked || !RS_Initialized) {

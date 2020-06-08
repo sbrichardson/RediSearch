@@ -9,7 +9,7 @@ extern "C" {
 int RediSearch_InitModuleInternal(RedisModuleCtx *ctx, RedisModuleString **argv, int argc);
 
 /** Cleans up all globals in the module */
-void RediSearch_CleanupModule(void);
+void RediSearch_CleanupModule(RedisModuleCtx *ctx, RedisModuleEvent eid, uint64_t subevent, void *data);
 
 /** Indicates that RediSearch_Init was called */
 extern int RS_Initialized;

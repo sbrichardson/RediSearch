@@ -176,5 +176,10 @@ int RediSearch_Init(RedisModuleCtx *ctx, int mode) {
     DO_LOG("warning", "Could not register default extension");
     return REDISMODULE_ERR;
   }
+
+  if (RedisModule_SubscribeToServerEvent) {
+    RedisModule_SubscribeToServerEvent(ctx, RedisModuleEvent_Shutdown, RediSearch_CleanupModule);
+  }
+
   return REDISMODULE_OK;
 }
