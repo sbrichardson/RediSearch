@@ -201,7 +201,9 @@ void GC_ThreadPoolStart() {
 
 void GC_ThreadPoolDestroy() {
   if (gcThreadpool_g != NULL) {
+    RedisModule_ThreadSafeContextUnlock(RSDummyContext);
     thpool_destroy(gcThreadpool_g);
     gcThreadpool_g = NULL;
+    RedisModule_ThreadSafeContextLock(RSDummyContext);
   }
 }
