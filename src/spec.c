@@ -15,6 +15,8 @@
 #include "alias.h"
 #include "module.h"
 #include "rmutil/rm_assert.h"
+#include "aggregate/expr/expression.h"
+#include "rules.h"
 
 void (*IndexSpec_OnCreate)(const IndexSpec *) = NULL;
 const char *(*IndexAlias_GetUserTableName)(RedisModuleCtx *, const char *) = NULL;
@@ -454,8 +456,10 @@ IndexSpec *IndexSpec_Parse(const char *name, const char **argv, int argc, QueryE
   ArgsCursor acStopwords = {0};
 
   ArgsCursor_InitCString(&ac, argv, argc);
+  ruleSettings rulesopts = {0};
   long long timeout = -1;
   int dummy;
+  size_t dummy2;
 
   ACArgSpec argopts[] = {
       {AC_MKUNFLAG(SPEC_NOOFFSETS_STR, &spec->flags,
@@ -466,6 +470,10 @@ IndexSpec *IndexSpec_Parse(const char *name, const char **argv, int argc, QueryE
       {AC_MKBITFLAG(SPEC_SCHEMA_EXPANDABLE_STR, &spec->flags, Index_WideSchema)},
       // For compatibility
       {.name = "NOSCOREIDX", .target = &dummy, .type = AC_ARGTYPE_BOOLFLAG},
+      {.name = "EXPRESSION", .target = &rulesopts.expr, .len = &dummy2, .type = AC_ARGTYPE_STRING},
+      {.name = "SCORE", .target = &rulesopts.score, .len = &dummy2, .type = AC_ARGTYPE_STRING},
+      {.name = "LANGUAGE", .target = &rulesopts.lang, .len = &dummy2, .type = AC_ARGTYPE_STRING},
+      {.name = "PAYLOAD", .target = &rulesopts.payload, .len = &dummy2, .type = AC_ARGTYPE_STRING},
       {.name = SPEC_TEMPORARY_STR, .target = &timeout, .type = AC_ARGTYPE_LLONG},
       {.name = SPEC_STOPWORDS_STR, .target = &acStopwords, .type = AC_ARGTYPE_SUBARGS},
       {.name = NULL}};
@@ -483,6 +491,13 @@ IndexSpec *IndexSpec_Parse(const char *name, const char **argv, int argc, QueryE
     spec->flags |= Index_Temporary;
   }
   spec->timeout = timeout;
+
+  if (rulesopts.expr) {
+    if ((spec->rule = Rule_Create(&rulesopts, status)) == NULL) {
+      goto failure;
+    }
+    SchemaRules_g = array_ensure_append(SchemaRules_g, spec, 1, IndexSpec);
+  }
 
   if (AC_IsInitialized(&acStopwords)) {
     if (spec->stopwords) {
@@ -663,6 +678,10 @@ void IndexSpec_FreeInternals(IndexSpec *spec) {
   if (spec->stopwords) {
     StopWordList_Unref(spec->stopwords);
     spec->stopwords = NULL;
+  }
+  if (spec->rule) {
+    Rule_free(spec->rule);
+    spec->rule = NULL;
   }
 
   if (spec->smap) {
