@@ -1,11 +1,5 @@
 #include "redismodule.h"
 
-#ifndef RS_NO_ONLOAD
-#pragma GCC visibility push(default)
-REDISMODULE_INIT_SYMBOLS();
-#pragma GCC visibility pop
-#endif
-
 #include "module.h"
 #include "version.h"
 #include "config.h"
@@ -107,6 +101,37 @@ static int initAsLibrary(RedisModuleCtx *ctx) {
 int RS_Initialized = 0;
 RedisModuleCtx *RSDummyContext = NULL;
 
+static int HashNotificationCallback(RedisModuleCtx *ctx, int type, const char *event, RedisModuleString *key) {
+  static const char *hset_event = 0, *hmset_event;
+  bool hset = false, hmset = false;
+  if (event == hset_event) {
+    hset = true;
+  } else if (event == hmset_event) {
+    hmset = true;
+  } else {
+    if (!strcmp(event, "hset")) {
+      hset = true;
+      hset_event = event;
+    } else if (!strcmp(event, "hmset")) {
+      hmset = true;
+      hmset_event = event;
+    }
+  }
+
+  const char *key_cp = RedisModule_StringPtrLen(key, NULL);
+  if (hset || hmset) {
+    RedisModule_Log(ctx, "notice", "key %s: event %s", key_cp, event);
+    Indexes_UpdateMatchingWithSchemaRules(ctx, key);
+  }
+
+  return REDISMODULE_OK;
+}
+
+static void Initialize_KeyspaceNotifications(RedisModuleCtx *ctx) {
+  RedisModule_SubscribeToKeyspaceEvents(ctx, REDISMODULE_NOTIFY_HASH, HashNotificationCallback);
+  //RedisModule_NotifyKeyspaceEvent(ctx, REDISMODULE_NOTIFY_HASH, , RedisModuleString *key)
+}
+
 int RediSearch_Init(RedisModuleCtx *ctx, int mode) {
 #define DO_LOG(...)                               \
   if (ctx && (mode != REDISEARCH_INIT_LIBRARY)) { \
@@ -169,5 +194,8 @@ int RediSearch_Init(RedisModuleCtx *ctx, int mode) {
     DO_LOG("warning", "Could not register default extension");
     return REDISMODULE_ERR;
   }
+
+  Initialize_KeyspaceNotifications(ctx);
+
   return REDISMODULE_OK;
 }
